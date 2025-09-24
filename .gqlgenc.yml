@@ -1,11 +1,11 @@
 # https://github.com/Yamashou/gqlgenc?tab=readme-ov-file#client-codes-only
 
 model:
-  package: generated
-  filename: ./generated/models.go
+  package: gql_gen
+  filename: internal/clients/graphql/gen/models.go
 client:
-  package: generated
-  filename: ./generated/client.go
+  package: gql_gen
+  filename: internal/clients/graphql/gen/client.go
 models:
   HTML:
     model: github.com/99designs/gqlgen/graphql.String
@@ -14,7 +14,8 @@ endpoint:
 #   headers: # If you need header for getting introspection query, set it
 #     Authorization: "Bearer ${API_TOKEN}" # support environment variables
 query:
-  - "./queries/*.gql" # Where are all the query files located?
+  - internal/clients/graphql/queries/*.gql
 generate:
   clientV2: true
   onlyUsedModels: true
+  clientInterfaceName: "GenGraphQLClient"

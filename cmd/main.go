@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"rtk/api-mocker/generated"
+	gql_gen "rtk/api-mocker/internal/clients/graphql/gen"
 	"rtk/api-mocker/internal/config"
 	"rtk/api-mocker/pkg/logger"
 	"runtime"
@@ -57,7 +57,7 @@ func main() {
 
 	// r := chi.NewRouter()
 
-	gqlClient := generated.NewClient(http.DefaultClient, config.ApiURL, nil,
+	gqlClient := gql_gen.NewClient(http.DefaultClient, config.ApiURL, nil,
 		func(ctx context.Context, req *http.Request, gqlInfo *clientv2.GQLRequestInfo, res any, next clientv2.RequestInterceptorFunc) error {
 			req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", config.ApiToken))
 
