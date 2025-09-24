@@ -1,13 +1,14 @@
 package logger
 
 import (
+	"log"
 	"rtk/api-mocker/internal/config"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
 
-func New(config *config.Config) (*zap.SugaredLogger, error) {
+func New(config *config.Config) *zap.SugaredLogger {
 	level := zap.NewAtomicLevel()
 
 	// if config.isDev {
@@ -38,8 +39,8 @@ func New(config *config.Config) (*zap.SugaredLogger, error) {
 
 	logger, err := cfg.Build()
 	if err != nil {
-		return nil, err
+		log.Fatalf("failed to initialize logger: %v", err)
 	}
 
-	return logger.Sugar(), nil
+	return logger.Sugar()
 }

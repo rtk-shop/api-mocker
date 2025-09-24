@@ -1,14 +1,18 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"log"
+	"net/http"
+	"rtk/api-mocker/generated"
 	"rtk/api-mocker/internal/config"
 	"rtk/api-mocker/pkg/logger"
 	"runtime"
 	"runtime/debug"
 
+	"github.com/Yamashou/gqlgenc/clientv2"
 	"github.com/joho/godotenv"
 )
 
@@ -44,16 +48,29 @@ func main() {
 
 	config := config.New()
 
-	zap, err := logger.New(config)
+	zap := logger.New(config)
+
+	zap.Info("info message")
+	// zap.Debug("debug message")
+	// zap.Warn("warn message")
+	// zap.Error("error message")
+
+	// r := chi.NewRouter()
+
+	gqlClient := generated.NewClient(http.DefaultClient, config.ApiURL, nil,
+		func(ctx context.Context, req *http.Request, gqlInfo *clientv2.GQLRequestInfo, res any, next clientv2.RequestInterceptorFunc) error {
+			req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", config.ApiToken))
+
+			return next(ctx, req, gqlInfo, res)
+		})
+
+	p, err := gqlClient.ProductByID(context.Background(), "7")
 	if err != nil {
-		log.Fatalf("failed to initialize logger: %v", err)
+		fmt.Println(err)
+		return
 	}
 
-	zap.Debug("debug message")
-	zap.Info("info message")
-	zap.Warn("warn message")
-	zap.Error("error message")
-	// logger := logger.New(config.Environment)
+	fmt.Println(p.Product)
 
 	// app := app.NewApp(config, logger, db, r2store)
 	// app.Run()

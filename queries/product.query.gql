@@ -1,0 +1,32 @@
+query ProductByID($id: ID!) {
+  product(id: $id) {
+    __typename
+    ... on Product {
+      id
+      title
+      sku
+      gender
+      currentPrice
+      basePrice
+      amount
+      tag
+      preview
+      category
+      inStock
+      colorName
+      sizeName
+      brandName
+      images
+      isHidden
+      updatedAt
+      createdAt
+      availableSizes {
+        size
+        productId
+      }
+    }
+    ... on NotFound {
+      message
+    }
+  }
+}
