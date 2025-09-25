@@ -6,13 +6,13 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	gql_gen "rtk/api-mocker/internal/clients/graphql/gen"
 	"rtk/api-mocker/internal/config"
+	"rtk/api-mocker/internal/generated/openapi"
 	"rtk/api-mocker/pkg/logger"
 	"runtime"
 	"runtime/debug"
 
-	"github.com/Yamashou/gqlgenc/clientv2"
+	"github.com/go-chi/chi/v5"
 	"github.com/joho/godotenv"
 )
 
@@ -57,21 +57,49 @@ func main() {
 
 	// r := chi.NewRouter()
 
-	gqlClient := gql_gen.NewClient(http.DefaultClient, config.ApiURL, nil,
-		func(ctx context.Context, req *http.Request, gqlInfo *clientv2.GQLRequestInfo, res any, next clientv2.RequestInterceptorFunc) error {
-			req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", config.ApiToken))
+	// gqlClient := gql_gen.NewClient(http.DefaultClient, config.ApiURL, nil,
+	// 	func(ctx context.Context, req *http.Request, gqlInfo *clientv2.GQLRequestInfo, res any, next clientv2.RequestInterceptorFunc) error {
+	// 		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", config.ApiToken))
 
-			return next(ctx, req, gqlInfo, res)
-		})
+	// 		return next(ctx, req, gqlInfo, res)
+	// 	})
 
-	p, err := gqlClient.ProductByID(context.Background(), "7")
-	if err != nil {
-		fmt.Println(err)
-		return
+	// p, err := gqlClient.ProductByID(context.Background(), "7")
+	// if err != nil {
+	// 	fmt.Println(err)
+	// 	return
+	// }
+
+	// fmt.Println(p.Product)
+
+	r := chi.NewRouter()
+
+	strictHandler := openapi.NewStrictHandler(&Server{}, nil)
+
+	handler := openapi.HandlerFromMux(strictHandler, r)
+
+	if err := http.ListenAndServe(":"+config.Port, handler); err != nil {
+		log.Fatalf("Server failed: %v", err)
 	}
-
-	fmt.Println(p.Product)
 
 	// app := app.NewApp(config, logger, db, r2store)
 	// app.Run()
+}
+
+type Server struct{}
+
+func (s *Server) CreateProducts(ctx context.Context, request openapi.CreateProductsRequestObject) (openapi.CreateProductsResponseObject, error) {
+	q := request.Body.Quantity
+
+	if q == 0 {
+		return openapi.CreateProducts400JSONResponse{
+			Message: "invalid quantity",
+		}, nil
+	}
+
+	resp := openapi.CreateProductsResponse{
+		Quantity: q,
+	}
+
+	return openapi.CreateProducts200JSONResponse(resp), nil
 }
