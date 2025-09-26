@@ -7,12 +7,16 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	gql_gen "rtk/api-mocker/internal/clients/graphql/gen"
 	"rtk/api-mocker/internal/config"
 	"rtk/api-mocker/internal/generated/openapi"
+	"rtk/api-mocker/internal/server"
+	"rtk/api-mocker/internal/services/product"
 	"rtk/api-mocker/pkg/logger"
 	"syscall"
 	"time"
 
+	"github.com/Yamashou/gqlgenc/clientv2"
 	"github.com/go-chi/chi/v5"
 	"golang.org/x/sync/errgroup"
 )
@@ -27,22 +31,24 @@ func New(config *config.Config, logger logger.Logger) App {
 
 	r := chi.NewRouter()
 
-	// gqlClient := gql_gen.NewClient(http.DefaultClient, config.ApiURL, nil,
-	// 	func(ctx context.Context, req *http.Request, gqlInfo *clientv2.GQLRequestInfo, res any, next clientv2.RequestInterceptorFunc) error {
-	// 		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", config.ApiToken))
+	gqlClient := gql_gen.NewClient(http.DefaultClient, config.ApiURL, nil,
+		func(ctx context.Context, req *http.Request, gqlInfo *clientv2.GQLRequestInfo, res any, next clientv2.RequestInterceptorFunc) error {
+			req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", config.ApiToken))
 
-	// 		return next(ctx, req, gqlInfo, res)
-	// 	})
+			return next(ctx, req, gqlInfo, res)
+		})
 
-	// p, err := gqlClient.ProductByID(context.Background(), "7")
-	// if err != nil {
-	// 	fmt.Println(err)
-	// 	return App{}
-	// }
+	productService := product.New(product.ServiceOptions{
+		Config:    config,
+		Logger:    logger,
+		GqlClient: gqlClient,
+	})
 
-	// fmt.Println(p.Product)
+	httpServer := server.New(config, logger, server.Services{
+		Products: productService,
+	})
 
-	strictHandler := openapi.NewStrictHandler(&Server{}, nil)
+	strictHandler := openapi.NewStrictHandler(httpServer, nil)
 
 	handler := openapi.HandlerFromMux(strictHandler, r)
 
