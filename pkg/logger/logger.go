@@ -14,6 +14,7 @@ type Logger interface {
 	Info(args ...any)
 	Warnw(msg string, keysAndValues ...any)
 	Errorw(msg string, keysAndValues ...any)
+	Infof(template string, args ...any)
 }
 
 func New(config *config.Config) *zap.SugaredLogger {
