@@ -15,6 +15,7 @@ import (
 
 // CreateProductsRequest defines model for CreateProductsRequest.
 type CreateProductsRequest struct {
+	// Quantity number of mock entities
 	Quantity int `json:"quantity"`
 }
 

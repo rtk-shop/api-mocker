@@ -2,9 +2,14 @@ openapi: 3.0.0
 info:
   title: Mock API server
   version: 1.0.0
+tags:
+  - name: product
+    description: Everything related to Products
 paths:
   /products:
     post:
+      tags:
+        - product
       summary: Create N-products
       operationId: CreateProducts
       requestBody:
@@ -45,6 +50,7 @@ components:
           type: integer
           format: int
           example: 3
+          description: number of mock entities
     CreateProductsResponse:
       type: object
       required:

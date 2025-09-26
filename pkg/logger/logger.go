@@ -8,6 +8,14 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
+type Logger interface {
+	Debugw(msg string, keysAndValues ...any)
+	Infow(msg string, keysAndValues ...any)
+	Info(args ...any)
+	Warnw(msg string, keysAndValues ...any)
+	Errorw(msg string, keysAndValues ...any)
+}
+
 func New(config *config.Config) *zap.SugaredLogger {
 	level := zap.NewAtomicLevel()
 
