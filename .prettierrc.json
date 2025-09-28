@@ -1,0 +1,10 @@
+{
+  "overrides": [
+    {
+      "files": "**/*.gql",
+      "options": {
+        "printWidth": 140
+      }
+    }
+  ]
+}
