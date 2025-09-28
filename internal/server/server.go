@@ -3,7 +3,7 @@ package server
 import (
 	"context"
 	"rtk/api-mocker/internal/config"
-	"rtk/api-mocker/internal/generated/openapi"
+	"rtk/api-mocker/internal/server/gen/openapi"
 	"rtk/api-mocker/internal/services/product"
 	"rtk/api-mocker/pkg/logger"
 )
