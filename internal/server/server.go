@@ -30,10 +30,9 @@ func New(config *config.Config, logger logger.Logger, services Services) *Server
 func (s *Server) CreateProducts(ctx context.Context, request openapi.CreateProductsRequestObject) (openapi.CreateProductsResponseObject, error) {
 	q := request.Body.Quantity
 
-	if q == 0 {
-		// todo: to 422
-		return openapi.CreateProducts400JSONResponse{
-			Message: "invalid quantity",
+	if q <= 0 {
+		return openapi.CreateProducts422JSONResponse{
+			Message: "quantity should be greater than 0",
 		}, nil
 	}
 

@@ -20,12 +20,18 @@ paths:
               $ref: "#/components/schemas/CreateProductsRequest"
       responses:
         200:
-          description: "OK: created N-products"
+          description: Successfully created N-products
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/CreateProductsResponse"
         400:
+          description: Request failed completely or partially
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreateProductsResponseError"
+        422:
           description: Bad Request - Invalid input
           content:
             application/json:
@@ -44,13 +50,13 @@ paths:
               $ref: "#/components/schemas/DeleteProductsRequest"
       responses:
         200:
-          description: "OK: deleted N-products"
+          description: Successfully deleted N-products
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/DeleteProductsResponse"
         400:
-          description: Bad Request
+          description: Request failed completely or partially
           content:
             application/json:
               schema:
@@ -72,6 +78,7 @@ components:
         message:
           type: string
           example: "Invalid input"
+    # products — create
     CreateProductsRequest:
       type: object
       required:
@@ -91,6 +98,14 @@ components:
           type: integer
           format: int
           example: 3
+    CreateProductsResponseError:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+    # products — delete
     DeleteProductsRequest:
       type: object
       required:
@@ -111,7 +126,7 @@ components:
         quantity:
           type: integer
           format: int
-          example: 10
+          example: 3
         id:
           type: array
           items:
@@ -125,3 +140,4 @@ components:
       properties:
         message:
           type: string
+          example: some products failed to delete

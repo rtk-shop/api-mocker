@@ -24,6 +24,11 @@ type CreateProductsResponse struct {
 	Quantity int `json:"quantity"`
 }
 
+// CreateProductsResponseError defines model for CreateProductsResponseError.
+type CreateProductsResponseError struct {
+	Message string `json:"message"`
+}
+
 // DeleteProductsRequest defines model for DeleteProductsRequest.
 type DeleteProductsRequest struct {
 	// Id IDs of products that should be removed
@@ -291,11 +296,20 @@ func (response CreateProducts200JSONResponse) VisitCreateProductsResponse(w http
 	return json.NewEncoder(w).Encode(response)
 }
 
-type CreateProducts400JSONResponse ErrorInputResponse
+type CreateProducts400JSONResponse CreateProductsResponseError
 
 func (response CreateProducts400JSONResponse) VisitCreateProductsResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateProducts422JSONResponse ErrorInputResponse
+
+func (response CreateProducts422JSONResponse) VisitCreateProductsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
 
 	return json.NewEncoder(w).Encode(response)
 }
