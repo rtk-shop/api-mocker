@@ -63,6 +63,21 @@ func New(options ServiceOptions) Service {
 		},
 	})
 
+	gofakeit.AddFuncLookup("productname10", gofakeit.Info{
+		Category:    "custom",
+		Description: "Product name with min length 10",
+		Output:      "string",
+		Generate: func(f *gofakeit.Faker, m *gofakeit.MapParams, info *gofakeit.Info) (any, error) {
+
+			for {
+				name := gofakeit.ProductName()
+				if len(name) >= 10 {
+					return name, nil
+				}
+			}
+		},
+	})
+
 	return &service{
 		config: options.Config,
 		log:    options.Logger,

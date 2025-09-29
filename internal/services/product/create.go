@@ -138,6 +138,8 @@ func (s *service) newMockProduct() (entities.NewProduct, error) {
 		return entities.NewProduct{}, err
 	}
 
+	newProduct.Title = newProduct.Title + " " + gofakeit.ProductName()
+
 	// fmt.Printf("%+v\n", newProduct)
 
 	previewFile, err := fetchFile(plugImagesURL[newProduct.Category], rand.Text()+".jpg")
