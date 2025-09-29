@@ -11,6 +11,7 @@ import (
 
 type GenGraphQLClient interface {
 	CreateProduct(ctx context.Context, title string, sku string, basePrice float64, amount int, gender Gender, category CategoryType, preview graphql.Upload, images []*ProductImageInput, description string, sizeName string, brandName string, interceptors ...clientv2.RequestInterceptor) (*CreateProduct, error)
+	DeleteProduct(ctx context.Context, id string, interceptors ...clientv2.RequestInterceptor) (*DeleteProduct, error)
 	ProductByID(ctx context.Context, id string, interceptors ...clientv2.RequestInterceptor) (*ProductByID, error)
 }
 
@@ -52,6 +53,17 @@ func (t *CreateProduct_CreateProduct) GetTitle() string {
 		t = &CreateProduct_CreateProduct{}
 	}
 	return t.Title
+}
+
+type DeleteProduct_DeleteProduct struct {
+	ID string "json:\"id\" graphql:\"id\""
+}
+
+func (t *DeleteProduct_DeleteProduct) GetID() string {
+	if t == nil {
+		t = &DeleteProduct_DeleteProduct{}
+	}
+	return t.ID
 }
 
 type ProductByID_Product_Product_AvailableSizes struct {
@@ -256,6 +268,17 @@ func (t *CreateProduct) GetCreateProduct() *CreateProduct_CreateProduct {
 	return &t.CreateProduct
 }
 
+type DeleteProduct struct {
+	DeleteProduct DeleteProduct_DeleteProduct "json:\"deleteProduct\" graphql:\"deleteProduct\""
+}
+
+func (t *DeleteProduct) GetDeleteProduct() *DeleteProduct_DeleteProduct {
+	if t == nil {
+		t = &DeleteProduct{}
+	}
+	return &t.DeleteProduct
+}
+
 type ProductByID struct {
 	Product ProductByID_Product "json:\"product\" graphql:\"product\""
 }
@@ -294,6 +317,30 @@ func (c *Client) CreateProduct(ctx context.Context, title string, sku string, ba
 
 	var res CreateProduct
 	if err := c.Client.Post(ctx, "CreateProduct", CreateProductDocument, &res, vars, interceptors...); err != nil {
+		if c.Client.ParseDataWhenErrors {
+			return &res, err
+		}
+
+		return nil, err
+	}
+
+	return &res, nil
+}
+
+const DeleteProductDocument = `mutation DeleteProduct ($id: ID!) {
+	deleteProduct(id: $id) {
+		id
+	}
+}
+`
+
+func (c *Client) DeleteProduct(ctx context.Context, id string, interceptors ...clientv2.RequestInterceptor) (*DeleteProduct, error) {
+	vars := map[string]any{
+		"id": id,
+	}
+
+	var res DeleteProduct
+	if err := c.Client.Post(ctx, "DeleteProduct", DeleteProductDocument, &res, vars, interceptors...); err != nil {
 		if c.Client.ParseDataWhenErrors {
 			return &res, err
 		}
@@ -357,5 +404,6 @@ func (c *Client) ProductByID(ctx context.Context, id string, interceptors ...cli
 
 var DocumentOperationNames = map[string]string{
 	CreateProductDocument: "CreateProduct",
+	DeleteProductDocument: "DeleteProduct",
 	ProductByIDDocument:   "ProductByID",
 }

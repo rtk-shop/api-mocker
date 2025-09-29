@@ -34,3 +34,8 @@ type UploadFile struct {
 	Data        []byte
 	ContentType string
 }
+
+type DeletedProductsPayload struct {
+	DeletedQuantity int
+	IDs             []string
+}

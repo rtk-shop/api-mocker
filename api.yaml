@@ -31,6 +31,37 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorInputResponse"
+    delete:
+      tags:
+        - product
+      summary: Delete N-products
+      operationId: DeleteProducts
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeleteProductsRequest"
+      responses:
+        200:
+          description: "OK: deleted N-products"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeleteProductsResponse"
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeleteProductsResponseError"
+        422:
+          description: Bad Request - Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorInputResponse"
+
 components:
   schemas:
     ErrorInputResponse:
@@ -60,3 +91,37 @@ components:
           type: integer
           format: int
           example: 3
+    DeleteProductsRequest:
+      type: object
+      required:
+        - id
+      properties:
+        id:
+          type: array
+          items:
+            type: string
+          example: ["811", "812", "813"]
+          description: IDs of products that should be removed
+    DeleteProductsResponse:
+      type: object
+      required:
+        - quantity
+        - id
+      properties:
+        quantity:
+          type: integer
+          format: int
+          example: 10
+        id:
+          type: array
+          items:
+            type: string
+          example: ["811", "812", "813"]
+          description: IDs of products that were successfully removed
+    DeleteProductsResponseError:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string

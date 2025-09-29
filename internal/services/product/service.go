@@ -20,6 +20,7 @@ type service struct {
 
 type Service interface {
 	Create(ctx context.Context, quantity int) (*entities.CreatedProductsPayload, error)
+	Delete(ctx context.Context, productIDs []string) (*entities.DeletedProductsPayload, error)
 }
 
 type ServiceOptions struct {

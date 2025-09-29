@@ -31,6 +31,7 @@ func (s *Server) CreateProducts(ctx context.Context, request openapi.CreateProdu
 	q := request.Body.Quantity
 
 	if q == 0 {
+		// todo: to 422
 		return openapi.CreateProducts400JSONResponse{
 			Message: "invalid quantity",
 		}, nil
@@ -52,4 +53,33 @@ func (s *Server) CreateProducts(ctx context.Context, request openapi.CreateProdu
 	}
 
 	return openapi.CreateProducts200JSONResponse(resp), nil
+}
+
+func (s *Server) DeleteProducts(ctx context.Context, request openapi.DeleteProductsRequestObject) (openapi.DeleteProductsResponseObject, error) {
+
+	productIDs := request.Body.Id
+
+	if len(productIDs) == 0 {
+		return openapi.DeleteProducts422JSONResponse{
+			Message: "empty id array",
+		}, nil
+	}
+
+	start := time.Now()
+
+	payload, err := s.services.Products.Delete(ctx, productIDs)
+	if err != nil {
+		return openapi.DeleteProducts400JSONResponse{
+			Message: err.Error(),
+		}, nil
+	}
+
+	s.log.Infof("%q execution duration time=%s\n", "delete-products", time.Since(start))
+
+	resp := openapi.DeleteProductsResponse{
+		Quantity: payload.DeletedQuantity,
+		Id:       payload.IDs,
+	}
+
+	return openapi.DeleteProducts200JSONResponse(resp), nil
 }

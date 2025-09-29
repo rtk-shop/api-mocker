@@ -14,6 +14,7 @@ type Logger interface {
 	Info(args ...any)
 	Warnw(msg string, keysAndValues ...any)
 	Errorw(msg string, keysAndValues ...any)
+	Errorf(template string, args ...any)
 	Infof(template string, args ...any)
 }
 

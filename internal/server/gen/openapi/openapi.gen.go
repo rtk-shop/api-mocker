@@ -24,16 +24,40 @@ type CreateProductsResponse struct {
 	Quantity int `json:"quantity"`
 }
 
+// DeleteProductsRequest defines model for DeleteProductsRequest.
+type DeleteProductsRequest struct {
+	// Id IDs of products that should be removed
+	Id []string `json:"id"`
+}
+
+// DeleteProductsResponse defines model for DeleteProductsResponse.
+type DeleteProductsResponse struct {
+	// Id IDs of products that were successfully removed
+	Id       []string `json:"id"`
+	Quantity int      `json:"quantity"`
+}
+
+// DeleteProductsResponseError defines model for DeleteProductsResponseError.
+type DeleteProductsResponseError struct {
+	Message string `json:"message"`
+}
+
 // ErrorInputResponse defines model for ErrorInputResponse.
 type ErrorInputResponse struct {
 	Message string `json:"message"`
 }
+
+// DeleteProductsJSONRequestBody defines body for DeleteProducts for application/json ContentType.
+type DeleteProductsJSONRequestBody = DeleteProductsRequest
 
 // CreateProductsJSONRequestBody defines body for CreateProducts for application/json ContentType.
 type CreateProductsJSONRequestBody = CreateProductsRequest
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// Delete N-products
+	// (DELETE /products)
+	DeleteProducts(w http.ResponseWriter, r *http.Request)
 	// Create N-products
 	// (POST /products)
 	CreateProducts(w http.ResponseWriter, r *http.Request)
@@ -42,6 +66,12 @@ type ServerInterface interface {
 // Unimplemented server implementation that returns http.StatusNotImplemented for each endpoint.
 
 type Unimplemented struct{}
+
+// Delete N-products
+// (DELETE /products)
+func (_ Unimplemented) DeleteProducts(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
 
 // Create N-products
 // (POST /products)
@@ -57,6 +87,20 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(http.Handler) http.Handler
+
+// DeleteProducts operation middleware
+func (siw *ServerInterfaceWrapper) DeleteProducts(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteProducts(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
 
 // CreateProducts operation middleware
 func (siw *ServerInterfaceWrapper) CreateProducts(w http.ResponseWriter, r *http.Request) {
@@ -186,10 +230,48 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	}
 
 	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/products", wrapper.DeleteProducts)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/products", wrapper.CreateProducts)
 	})
 
 	return r
+}
+
+type DeleteProductsRequestObject struct {
+	Body *DeleteProductsJSONRequestBody
+}
+
+type DeleteProductsResponseObject interface {
+	VisitDeleteProductsResponse(w http.ResponseWriter) error
+}
+
+type DeleteProducts200JSONResponse DeleteProductsResponse
+
+func (response DeleteProducts200JSONResponse) VisitDeleteProductsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeleteProducts400JSONResponse DeleteProductsResponseError
+
+func (response DeleteProducts400JSONResponse) VisitDeleteProductsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeleteProducts422JSONResponse ErrorInputResponse
+
+func (response DeleteProducts422JSONResponse) VisitDeleteProductsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+
+	return json.NewEncoder(w).Encode(response)
 }
 
 type CreateProductsRequestObject struct {
@@ -220,6 +302,9 @@ func (response CreateProducts400JSONResponse) VisitCreateProductsResponse(w http
 
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
+	// Delete N-products
+	// (DELETE /products)
+	DeleteProducts(ctx context.Context, request DeleteProductsRequestObject) (DeleteProductsResponseObject, error)
 	// Create N-products
 	// (POST /products)
 	CreateProducts(ctx context.Context, request CreateProductsRequestObject) (CreateProductsResponseObject, error)
@@ -252,6 +337,37 @@ type strictHandler struct {
 	ssi         StrictServerInterface
 	middlewares []StrictMiddlewareFunc
 	options     StrictHTTPServerOptions
+}
+
+// DeleteProducts operation middleware
+func (sh *strictHandler) DeleteProducts(w http.ResponseWriter, r *http.Request) {
+	var request DeleteProductsRequestObject
+
+	var body DeleteProductsJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteProducts(ctx, request.(DeleteProductsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteProducts")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteProductsResponseObject); ok {
+		if err := validResponse.VisitDeleteProductsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
 }
 
 // CreateProducts operation middleware
