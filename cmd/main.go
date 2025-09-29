@@ -45,6 +45,7 @@ func main() {
 
 	config := config.New()
 	zap := logger.New(config)
+	defer zap.Sync()
 
 	app := app.New(config, zap)
 	app.Run()

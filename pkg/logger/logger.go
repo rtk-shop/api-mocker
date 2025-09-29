@@ -2,6 +2,7 @@ package logger
 
 import (
 	"log"
+	"os"
 	"rtk/api-mocker/internal/config"
 
 	"go.uber.org/zap"
@@ -21,36 +22,32 @@ type Logger interface {
 func New(config *config.Config) *zap.SugaredLogger {
 	level := zap.NewAtomicLevel()
 
-	// if config.isDev {
-	//  level.SetLevel(zap.DebugLevel)
-	// } else {
-	// 	level.SetLevel(zap.InfoLevel)
-	// }
-
 	level.SetLevel(zap.DebugLevel)
 
-	cfg := zap.Config{
-		Level:            level,
-		Development:      true,
-		Encoding:         "console",
-		OutputPaths:      []string{"stdout"},
-		ErrorOutputPaths: []string{"stderr"},
-		EncoderConfig: func() zapcore.EncoderConfig {
-			encCfg := zap.NewDevelopmentEncoderConfig()
+	consoleEncoderCfg := zap.NewDevelopmentEncoderConfig()
 
-			encCfg.StacktraceKey = ""
-			encCfg.CallerKey = "C"
-			encCfg.EncodeLevel = zapcore.CapitalColorLevelEncoder
-			encCfg.EncodeTime = zapcore.RFC3339TimeEncoder
+	consoleEncoderCfg.StacktraceKey = ""
+	consoleEncoderCfg.CallerKey = "C"
+	consoleEncoderCfg.EncodeLevel = zapcore.CapitalColorLevelEncoder
+	consoleEncoderCfg.EncodeTime = zapcore.RFC3339TimeEncoder
 
-			return encCfg
-		}(),
-	}
+	consoleEncoder := zapcore.NewConsoleEncoder(consoleEncoderCfg)
 
-	logger, err := cfg.Build()
+	// file encoder (JSON)
+	fileEncoderCfg := zap.NewProductionEncoderConfig()
+	fileEncoderCfg.EncodeTime = zapcore.RFC3339TimeEncoder
+	fileEncoder := zapcore.NewJSONEncoder(fileEncoderCfg)
+
+	file, err := os.OpenFile(config.LogFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 	if err != nil {
-		log.Fatalf("failed to initialize logger: %v", err)
+		log.Fatalf("failed to open log file: %v", err)
 	}
 
+	core := zapcore.NewTee(
+		zapcore.NewCore(consoleEncoder, zapcore.Lock(os.Stdout), level),
+		zapcore.NewCore(fileEncoder, zapcore.AddSync(file), level),
+	)
+
+	logger := zap.New(core, zap.AddCaller(), zap.AddStacktrace(zap.ErrorLevel))
 	return logger.Sugar()
 }
