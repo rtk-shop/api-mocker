@@ -2,6 +2,8 @@ package product
 
 import (
 	"context"
+	"io"
+	"net/http"
 	gql_gen "rtk/api-mocker/internal/clients/graphql/gen"
 	"rtk/api-mocker/internal/config"
 	"rtk/api-mocker/internal/entities"
@@ -66,3 +68,45 @@ func New(options ServiceOptions) Service {
 		gql:    options.GqlClient,
 	}
 }
+
+func fetchFile(url, filename string) (*entities.UploadFile, error) {
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	return &entities.UploadFile{
+		Filename:    filename,
+		Data:        data,
+		ContentType: http.DetectContentType(data),
+	}, nil
+}
+
+// func downloadAsUpload(url, filename string) (graphql.Upload, error) {
+// 	resp, err := http.Get(url)
+// 	if err != nil {
+// 		return graphql.Upload{}, err
+// 	}
+
+// 	defer resp.Body.Close()
+
+// 	data, err := io.ReadAll(resp.Body)
+// 	if err != nil {
+// 		return graphql.Upload{}, err
+// 	}
+
+// 	upload := graphql.Upload{
+// 		File:        bytes.NewReader(data),
+// 		Filename:    filename,
+// 		Size:        int64(len(data)),
+// 		ContentType: http.DetectContentType(data),
+// 	}
+
+// 	return upload, nil
+// }

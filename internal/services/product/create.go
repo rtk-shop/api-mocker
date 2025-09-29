@@ -5,7 +5,6 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	mathRand "math/rand"
@@ -29,7 +28,7 @@ var sizeVariations = map[gql_gen.CategoryType][]string{
 	gql_gen.CategoryTypeSuitcase: {"S", "M", "L"},
 	gql_gen.CategoryTypeBackpack: {"S", "M"},
 	gql_gen.CategoryTypeBag:      {"S", "M"},
-	gql_gen.CategoryTypeOther:    {},
+	gql_gen.CategoryTypeOther:    {"none"},
 }
 
 func RandomSizeName(category gql_gen.CategoryType) string {
@@ -41,63 +40,9 @@ func RandomSizeName(category gql_gen.CategoryType) string {
 	return sizes[mathRand.Intn(len(sizes))]
 }
 
-// func downloadAsUpload(url, filename string) (graphql.Upload, error) {
-// 	resp, err := http.Get(url)
-// 	if err != nil {
-// 		return graphql.Upload{}, err
-// 	}
-
-// 	defer resp.Body.Close()
-
-// 	data, err := io.ReadAll(resp.Body)
-// 	if err != nil {
-// 		return graphql.Upload{}, err
-// 	}
-
-// 	upload := graphql.Upload{
-// 		File:        bytes.NewReader(data),
-// 		Filename:    filename,
-// 		Size:        int64(len(data)),
-// 		ContentType: http.DetectContentType(data),
-// 	}
-
-// 	return upload, nil
-// }
-
-func fetchFile(url, filename string) (*entities.UploadFile, error) {
-	resp, err := http.Get(url)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	data, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	return &entities.UploadFile{
-		Filename:    filename,
-		Data:        data,
-		ContentType: http.DetectContentType(data),
-	}, nil
-}
-
 func (s *service) Create(ctx context.Context, quantity int) (*entities.CreatedProductsPayload, error) {
 
 	s.log.Infof("try to create products, quantity=%d", quantity)
-
-	var newProduct entities.NewProduct
-
-	err := gofakeit.Struct(&newProduct)
-	if err != nil {
-		return nil, err
-	}
-
-	// fmt.Printf("%+v\n", newProduct)
-
-	fmt.Printf("category=%s\n", newProduct.Category)
-	fmt.Printf("image_url=%s\n", plugImagesURL[newProduct.Category])
 
 	// INFO: gql client generator doesn't support nasted graphql.Upload
 	// issue: https://github.com/Yamashou/gqlgenc/issues/292
@@ -133,36 +78,26 @@ func (s *service) Create(ctx context.Context, quantity int) (*entities.CreatedPr
 	// 	fmt.Printf("order=%d, filename=%s, size=%d\n", img.Order, img.Image.Filename, img.Image.Size)
 	// }
 
-	previewFile, err := fetchFile(plugImagesURL[newProduct.Category], rand.Text()+".jpg")
-	if err != nil {
-		return nil, err
-	}
+	var createdIDs []string
 
-	newProduct.Preview = previewFile
+	for range quantity {
 
-	otherImages := make([]*entities.ProductImageInput, 0, 2)
-
-	for i := range 2 {
-
-		img, err := fetchFile(plugImagesURL[newProduct.Category], rand.Text()+".jpg")
+		product, err := s.newMockProduct()
 		if err != nil {
+			s.log.Errorw("get mock product", "error", err)
 			return nil, err
 		}
 
-		otherImages = append(otherImages, &entities.ProductImageInput{
-			Order: i + 1,
-			Image: img,
-		})
+		productID, err := s.tempMakeCreateProductMutation(ctx, product)
+		if err != nil {
+			s.log.Errorw("make createProduct mutation", "error", err)
+			return nil, err
+		}
+
+		createdIDs = append(createdIDs, productID)
 	}
 
-	newProduct.Images = otherImages
-	newProduct.SizeName = RandomSizeName(newProduct.Category)
-
-	err = s.tempMakeCreateProductMutation(ctx, newProduct)
-	if err != nil {
-		s.log.Errorw("make createProduct mutation", "error", err)
-		return nil, err
-	}
+	s.log.Infow("created products id's", "id", createdIDs)
 
 	// createProduct, err := s.gql.CreateProduct(ctx,
 	// 	newProduct.Title,
@@ -189,10 +124,52 @@ func (s *service) Create(ctx context.Context, quantity int) (*entities.CreatedPr
 
 	// fmt.Println("-->", createProduct)
 
-	return nil, errors.New("todo")
+	return &entities.CreatedProductsPayload{
+		Quantity: len(createdIDs),
+	}, nil
 }
 
-func (s *service) tempMakeCreateProductMutation(ctx context.Context, input entities.NewProduct) error {
+func (s *service) newMockProduct() (entities.NewProduct, error) {
+
+	var newProduct entities.NewProduct
+
+	err := gofakeit.Struct(&newProduct)
+	if err != nil {
+		return entities.NewProduct{}, err
+	}
+
+	// fmt.Printf("%+v\n", newProduct)
+
+	previewFile, err := fetchFile(plugImagesURL[newProduct.Category], rand.Text()+".jpg")
+	if err != nil {
+		return entities.NewProduct{}, err
+	}
+
+	newProduct.Preview = previewFile
+
+	otherImages := make([]*entities.ProductImageInput, 0, 2)
+
+	for i := range 2 {
+
+		img, err := fetchFile(plugImagesURL[newProduct.Category], rand.Text()+".jpg")
+		if err != nil {
+			return entities.NewProduct{}, err
+		}
+
+		otherImages = append(otherImages, &entities.ProductImageInput{
+			Order: i + 1,
+			Image: img,
+		})
+	}
+
+	newProduct.Images = otherImages
+	newProduct.SizeName = RandomSizeName(newProduct.Category)
+
+	return newProduct, nil
+
+}
+
+func (s *service) tempMakeCreateProductMutation(ctx context.Context, input entities.NewProduct) (string, error) {
 
 	query := gql_gen.CreateProductDocument
 
@@ -237,7 +214,7 @@ func (s *service) tempMakeCreateProductMutation(ctx context.Context, input entit
 		"variables": variables,
 	})
 	if err != nil {
-		return fmt.Errorf("failed to marshal operations: %w", err)
+		return "", fmt.Errorf("failed to marshal operations: %w", err)
 	}
 
 	w.WriteField("operations", string(opsJSON))
@@ -246,7 +223,7 @@ func (s *service) tempMakeCreateProductMutation(ctx context.Context, input entit
 
 	mapJSON, err := json.Marshal(mapData)
 	if err != nil {
-		return fmt.Errorf("failed to marshal map data: %w", err)
+		return "", fmt.Errorf("failed to marshal map data: %w", err)
 	}
 
 	w.WriteField("map", string(mapJSON))
@@ -258,11 +235,11 @@ func (s *service) tempMakeCreateProductMutation(ctx context.Context, input entit
 
 		part, err := w.CreateFormFile(strconv.Itoa(idx), file.Filename)
 		if err != nil {
-			return fmt.Errorf("failed to create form-file for index %d: %w", idx, err)
+			return "", fmt.Errorf("failed to create form-file for index %d: %w", idx, err)
 		}
 
 		if _, err := part.Write(file.Data); err != nil {
-			return fmt.Errorf("failed to write file data for index %d: %w", idx, err)
+			return "", fmt.Errorf("failed to write file data for index %d: %w", idx, err)
 		}
 	}
 
@@ -270,7 +247,7 @@ func (s *service) tempMakeCreateProductMutation(ctx context.Context, input entit
 
 	req, err := http.NewRequestWithContext(ctx, "POST", s.config.ApiURL, &b)
 	if err != nil {
-		return fmt.Errorf("failed to create request: %w", err)
+		return "", fmt.Errorf("failed to create request: %w", err)
 	}
 
 	req.Header.Set("Content-Type", w.FormDataContentType())
@@ -279,16 +256,74 @@ func (s *service) tempMakeCreateProductMutation(ctx context.Context, input entit
 	client := http.DefaultClient
 	resp, err := client.Do(req)
 	if err != nil {
-		return err
+		return "", err
 	}
 	defer resp.Body.Close()
 
 	payload, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return fmt.Errorf("failed to read response body: %w", err)
+		return "", fmt.Errorf("failed to read response body: %w", err)
 	}
 
-	fmt.Println("Server response:", string(payload))
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("server error: status %d, body: %s", resp.StatusCode, payload)
+	}
 
-	return nil
+	// fmt.Println("Server response:", string(payload))
+
+	gqlResp, err := parseGraphQLResponse(payload)
+	if err != nil {
+		return "", fmt.Errorf("server error: parse gql response, payload: %s", payload)
+	}
+
+	s.log.Info("✅ product created: ", string(gqlResp.Data))
+
+	// {"createProduct":{"id":"234","title":"Robust Appliance Dash","currentPrice":6754,"basePrice":6754}}
+
+	var createProductResp GraphQLCreateProductResponse
+	if err := json.Unmarshal(gqlResp.Data, &createProductResp); err != nil {
+		return "", fmt.Errorf("server error: parse createProduct raw response, err: %w", err)
+	}
+
+	return createProductResp.CreateProduct.ID, nil
+}
+
+type GraphQLResponse struct {
+	Data   json.RawMessage `json:"data"`
+	Errors []struct {
+		Message string   `json:"message"`
+		Path    []string `json:"path"`
+	} `json:"errors"`
+}
+
+type GraphQLCreateProductResponse struct {
+	CreateProduct struct {
+		ID           string  `json:"id"`
+		Title        string  `json:"title"`
+		CurrentPrice float64 `json:"currentPrice"`
+		BasePrice    float64 `json:"basePrice"`
+	} `json:"createProduct"`
+}
+
+func parseGraphQLResponse(body []byte) (*GraphQLResponse, error) {
+
+	var resp GraphQLResponse
+
+	if err := json.Unmarshal(body, &resp); err != nil {
+		return nil, fmt.Errorf("decode json: %w", err)
+	}
+
+	// with "errors"
+	if len(resp.Errors) > 0 {
+		return &resp, fmt.Errorf("graphql error: %s (path=%v)",
+			resp.Errors[0].Message, resp.Errors[0].Path)
+	}
+
+	// with "data"
+	if len(resp.Data) > 0 && string(resp.Data) != "null" {
+		return &resp, nil
+	}
+
+	// no data or errors — unexpected
+	return &resp, fmt.Errorf("unexpected graphql response: %s", body)
 }

@@ -6,6 +6,7 @@ import (
 	"rtk/api-mocker/internal/server/gen/openapi"
 	"rtk/api-mocker/internal/services/product"
 	"rtk/api-mocker/pkg/logger"
+	"time"
 )
 
 type Server struct {
@@ -35,12 +36,16 @@ func (s *Server) CreateProducts(ctx context.Context, request openapi.CreateProdu
 		}, nil
 	}
 
+	start := time.Now()
+
 	payload, err := s.services.Products.Create(ctx, q)
 	if err != nil {
 		return openapi.CreateProducts400JSONResponse{
 			Message: err.Error(),
 		}, nil
 	}
+
+	s.log.Infof("%q execution duration time=%s\n", "create-products", time.Since(start))
 
 	resp := openapi.CreateProductsResponse{
 		Quantity: payload.Quantity,
