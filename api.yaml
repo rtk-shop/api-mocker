@@ -135,6 +135,7 @@ components:
       properties:
         message:
           type: string
+          example: failed to create any products
 
     CreateProductErrorItem:
       type: object
