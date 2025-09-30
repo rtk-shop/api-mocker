@@ -13,6 +13,7 @@ import (
 	gql_gen "rtk/api-mocker/internal/clients/graphql/gen"
 	"rtk/api-mocker/internal/entities"
 	"strconv"
+	"sync"
 
 	"github.com/brianvoe/gofakeit/v7"
 )
@@ -35,26 +36,66 @@ func (s *service) Create(ctx context.Context, quantity int) (*entities.CreatedPr
 		return nil, errors.New("failed to preload plug images")
 	}
 
-	var createdIDs []string
+	var wg sync.WaitGroup
+
+	type result struct {
+		productID string
+		err       error
+	}
+
+	resultsCh := make(chan result, quantity)
 
 	for range quantity {
 
-		product, err := s.newMockProduct()
-		if err != nil {
-			s.log.Errorw("get mock product", "error", err)
-			return nil, err
-		}
+		wg.Add(1)
 
-		productID, err := s.tempMakeCreateProductMutation(ctx, product)
-		if err != nil {
-			s.log.Errorw("make createProduct mutation", "error", err)
-			return nil, err
-		}
+		go func() {
 
-		createdIDs = append(createdIDs, productID)
+			defer wg.Done()
+
+			select {
+			case <-ctx.Done():
+				resultsCh <- result{err: ctx.Err()} // cancled context
+				return
+			default:
+				// continue work
+			}
+
+			product, err := s.newMockProduct()
+			if err != nil {
+				s.log.Errorw("get mock product", "error", err)
+				resultsCh <- result{err: err}
+				return
+			}
+
+			productID, err := s.tempMakeCreateProductMutation(ctx, product)
+			if err != nil {
+				s.log.Errorw("make createProduct mutation", "error", err)
+				resultsCh <- result{err: err}
+				return
+			}
+
+			resultsCh <- result{productID: productID, err: nil}
+		}()
 	}
 
-	s.log.Infow("created products id's", "id", createdIDs)
+	go func() {
+		wg.Wait()
+		close(resultsCh)
+	}()
+
+	var createdProductIDs []string
+	var deleteErrors []string
+
+	for res := range resultsCh {
+		if res.err != nil {
+			deleteErrors = append(deleteErrors, fmt.Sprintf("product_id=%s: %s", res.productID, res.err.Error()))
+		} else {
+			createdProductIDs = append(createdProductIDs, res.productID)
+		}
+	}
+
+	s.log.Infow("created products id's", "id", createdProductIDs)
 
 	// createProduct, err := s.gql.CreateProduct(ctx,
 	// 	newProduct.Title,
@@ -82,7 +123,7 @@ func (s *service) Create(ctx context.Context, quantity int) (*entities.CreatedPr
 	// fmt.Println("-->", createProduct)
 
 	return &entities.CreatedProductsPayload{
-		Quantity: len(createdIDs),
+		Quantity: len(createdProductIDs),
 	}, nil
 }
 
