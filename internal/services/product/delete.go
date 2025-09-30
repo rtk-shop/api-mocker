@@ -33,6 +33,14 @@ func (s *service) Delete(ctx context.Context, productIDs []string) (*entities.De
 
 			defer wg.Done()
 
+			select {
+			case <-ctx.Done():
+				resultsCh <- result{err: ctx.Err()} // cancled context
+				return
+			default:
+				// continue work
+			}
+
 			payload, err := s.gql.DeleteProduct(ctx, id)
 			if err != nil {
 				if handledError, ok := err.(*clientv2.ErrorResponse); ok {
@@ -42,6 +50,7 @@ func (s *service) Delete(ctx context.Context, productIDs []string) (*entities.De
 				}
 
 				resultsCh <- result{productID: id, err: err}
+				return
 			}
 
 			deleteProduct := payload.GetDeleteProduct()
