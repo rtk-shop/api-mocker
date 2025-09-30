@@ -5,7 +5,13 @@ import (
 )
 
 type CreatedProductsPayload struct {
-	Quantity int
+	Quantity   int
+	ProductsId []string
+	Errors     []CretatedProductsError
+}
+
+type CretatedProductsError struct {
+	Message string
 }
 
 type NewProduct struct {

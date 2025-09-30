@@ -47,8 +47,18 @@ func (s *Server) CreateProducts(ctx context.Context, request openapi.CreateProdu
 
 	s.log.Infof("%q execution duration time=%s\n", "create-products", time.Since(start))
 
+	errors := make([]openapi.CreateProductErrorItem, 0, len(payload.Errors))
+
+	for _, respErr := range payload.Errors {
+		errors = append(errors, openapi.CreateProductErrorItem{
+			Message: respErr.Message,
+		})
+	}
+
 	resp := openapi.CreateProductsResponse{
-		Quantity: payload.Quantity,
+		Quantity:   payload.Quantity,
+		ProductsId: payload.ProductsId,
+		Errors:     errors,
 	}
 
 	return openapi.CreateProducts200JSONResponse(resp), nil

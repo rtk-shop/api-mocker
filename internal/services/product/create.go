@@ -85,17 +85,22 @@ func (s *service) Create(ctx context.Context, quantity int) (*entities.CreatedPr
 	}()
 
 	var createdProductIDs []string
-	var deleteErrors []string
+	var productErrors []entities.CretatedProductsError
 
 	for res := range resultsCh {
 		if res.err != nil {
-			deleteErrors = append(deleteErrors, fmt.Sprintf("product_id=%s: %s", res.productID, res.err.Error()))
+			productErrors = append(productErrors, entities.CretatedProductsError{
+				Message: res.err.Error(),
+			})
 		} else {
 			createdProductIDs = append(createdProductIDs, res.productID)
 		}
 	}
 
-	s.log.Infow("created products id's", "id", createdProductIDs)
+	s.log.Infow("products creation completed",
+		"success", len(createdProductIDs),
+		"failed", len(productErrors),
+		"ids", createdProductIDs)
 
 	// createProduct, err := s.gql.CreateProduct(ctx,
 	// 	newProduct.Title,
@@ -120,10 +125,14 @@ func (s *service) Create(ctx context.Context, quantity int) (*entities.CreatedPr
 	// 	return nil, err
 	// }
 
-	// fmt.Println("-->", createProduct)
+	if len(createdProductIDs) == 0 {
+		return nil, fmt.Errorf("failed to create any products: all %d attempts failed", quantity)
+	}
 
 	return &entities.CreatedProductsPayload{
-		Quantity: len(createdProductIDs),
+		Quantity:   len(createdProductIDs),
+		ProductsId: createdProductIDs,
+		Errors:     productErrors,
 	}, nil
 }
 
@@ -139,8 +148,6 @@ func (s *service) newMockProduct() (entities.NewProduct, error) {
 	}
 
 	newProduct.Title = newProduct.Title + " " + gofakeit.ProductName()
-
-	// fmt.Printf("%+v\n", newProduct)
 
 	previewFile, ok := s.plugFiles[newProduct.Category]
 	if !ok {

@@ -2,6 +2,8 @@ openapi: 3.0.0
 info:
   title: Mock API server
   version: 1.0.0
+servers:
+  - url: http://localhost:8888
 tags:
   - name: product
     description: Everything related to Products
@@ -20,11 +22,26 @@ paths:
               $ref: "#/components/schemas/CreateProductsRequest"
       responses:
         200:
-          description: Successfully created N-products
+          description: N-products or some part of them have been successfully created
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/CreateProductsResponse"
+              examples:
+                fullSuccess:
+                  summary: All products created successfully
+                  value:
+                    quantity: 3
+                    productsId: ["234", "235", "236"]
+                    errors: []
+                partialSuccess:
+                  summary: Partial success (3 out of 5)
+                  value:
+                    quantity: 3
+                    productsId: ["234", "235", "236"]
+                    errors:
+                      - message: "error details"
+                      - message: "error details"
         400:
           description: Request failed completely or partially
           content:
@@ -93,11 +110,24 @@ components:
       type: object
       required:
         - quantity
+        - productsId
+        - errors
       properties:
         quantity:
           type: integer
           format: int
           example: 3
+        productsId:
+          type: array
+          items:
+            type: string
+          example: ["811", "812", "813"]
+          description: IDs of products that were successfully created
+        errors:
+          type: array
+          description: Array of errors for failed product creations
+          items:
+            $ref: "#/components/schemas/CreateProductErrorItem"
     CreateProductsResponseError:
       type: object
       required:
@@ -105,6 +135,17 @@ components:
       properties:
         message:
           type: string
+
+    CreateProductErrorItem:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+          description: Error message describing why the product creation failed
+          example: "failed to upload image: connection timeout"
+
     # products — delete
     DeleteProductsRequest:
       type: object

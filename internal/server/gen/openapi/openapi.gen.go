@@ -13,6 +13,12 @@ import (
 	strictnethttp "github.com/oapi-codegen/runtime/strictmiddleware/nethttp"
 )
 
+// CreateProductErrorItem defines model for CreateProductErrorItem.
+type CreateProductErrorItem struct {
+	// Message Error message describing why the product creation failed
+	Message string `json:"message"`
+}
+
 // CreateProductsRequest defines model for CreateProductsRequest.
 type CreateProductsRequest struct {
 	// Quantity number of mock entities
@@ -21,7 +27,12 @@ type CreateProductsRequest struct {
 
 // CreateProductsResponse defines model for CreateProductsResponse.
 type CreateProductsResponse struct {
-	Quantity int `json:"quantity"`
+	// Errors Array of errors for failed product creations
+	Errors []CreateProductErrorItem `json:"errors"`
+
+	// ProductsId IDs of products that were successfully created
+	ProductsId []string `json:"productsId"`
+	Quantity   int      `json:"quantity"`
 }
 
 // CreateProductsResponseError defines model for CreateProductsResponseError.
