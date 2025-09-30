@@ -9,19 +9,17 @@ type CreatedProductsPayload struct {
 }
 
 type NewProduct struct {
-	Title     string               `fake:"{productname}"`
-	SKU       string               `fake:"{productupc}"`
-	BasePrice int                  `fake:"{number:390,8122}"`
-	Amount    int                  `fake:"{number:10,30}"`
-	Gender    gql_gen.Gender       `fake:"{apiGender}"`
-	Category  gql_gen.CategoryType `fake:"{apiProductCategory}"`
-	Preview   *UploadFile          `fake:"skip"`
-	// Preview   graphql.Upload       `fake:"skip"`
-	Images []*ProductImageInput `fake:"skip"`
-	// Images      []*gql_gen.ProductImageInput `fake:"skip"`
-	Description string `fake:"{productdescription}"`
-	SizeName    string `fake:"skip"`
-	BrandName   string `fake:"{company}"`
+	Title       string               `fake:"{productname}"`
+	SKU         string               `fake:"{productupc}"`
+	BasePrice   int                  `fake:"{number:390,8122}"`
+	Amount      int                  `fake:"{number:10,30}"`
+	Gender      gql_gen.Gender       `fake:"{apiGender}"`
+	Category    gql_gen.CategoryType `fake:"{apiProductCategory}"`
+	Preview     UploadFile           `fake:"skip"`
+	Images      []*ProductImageInput `fake:"skip"`
+	Description string               `fake:"{productdescription}"`
+	SizeName    string               `fake:"skip"`
+	BrandName   string               `fake:"{company}"`
 }
 
 type ProductImageInput struct {

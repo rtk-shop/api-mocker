@@ -2,20 +2,21 @@ package product
 
 import (
 	"context"
-	"io"
-	"net/http"
 	gql_gen "rtk/api-mocker/internal/clients/graphql/gen"
 	"rtk/api-mocker/internal/config"
 	"rtk/api-mocker/internal/entities"
 	"rtk/api-mocker/pkg/logger"
+	"sync"
 
 	"github.com/brianvoe/gofakeit/v7"
 )
 
 type service struct {
-	config *config.Config
-	log    logger.Logger
-	gql    gql_gen.GenGraphQLClient
+	config    *config.Config
+	log       logger.Logger
+	gql       gql_gen.GenGraphQLClient
+	plugFiles map[gql_gen.CategoryType]entities.UploadFile
+	once      sync.Once
 }
 
 type Service interface {
@@ -27,6 +28,20 @@ type ServiceOptions struct {
 	Config    *config.Config
 	Logger    logger.Logger
 	GqlClient gql_gen.GenGraphQLClient
+}
+
+var plugImagesURL = map[gql_gen.CategoryType]string{
+	gql_gen.CategoryTypeBackpack: "https://s3.rtkstore.org/plug/backpack.jpg",
+	gql_gen.CategoryTypeBag:      "https://s3.rtkstore.org/plug/bag.jpg",
+	gql_gen.CategoryTypeOther:    "https://s3.rtkstore.org/plug/other.jpg",
+	gql_gen.CategoryTypeSuitcase: "https://s3.rtkstore.org/plug/suitcase.jpg",
+}
+
+var sizeVariations = map[gql_gen.CategoryType][]string{
+	gql_gen.CategoryTypeSuitcase: {"S", "M", "L"},
+	gql_gen.CategoryTypeBackpack: {"S", "M"},
+	gql_gen.CategoryTypeBag:      {"S", "M"},
+	gql_gen.CategoryTypeOther:    {"none"},
 }
 
 func New(options ServiceOptions) Service {
@@ -84,45 +99,3 @@ func New(options ServiceOptions) Service {
 		gql:    options.GqlClient,
 	}
 }
-
-func fetchFile(url, filename string) (*entities.UploadFile, error) {
-	resp, err := http.Get(url)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	data, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	return &entities.UploadFile{
-		Filename:    filename,
-		Data:        data,
-		ContentType: http.DetectContentType(data),
-	}, nil
-}
-
-// func downloadAsUpload(url, filename string) (graphql.Upload, error) {
-// 	resp, err := http.Get(url)
-// 	if err != nil {
-// 		return graphql.Upload{}, err
-// 	}
-
-// 	defer resp.Body.Close()
-
-// 	data, err := io.ReadAll(resp.Body)
-// 	if err != nil {
-// 		return graphql.Upload{}, err
-// 	}
-
-// 	upload := graphql.Upload{
-// 		File:        bytes.NewReader(data),
-// 		Filename:    filename,
-// 		Size:        int64(len(data)),
-// 		ContentType: http.DetectContentType(data),
-// 	}
-
-// 	return upload, nil
-// }

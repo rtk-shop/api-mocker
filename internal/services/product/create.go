@@ -3,8 +3,8 @@ package product
 import (
 	"bytes"
 	"context"
-	"crypto/rand"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	mathRand "math/rand"
@@ -16,20 +16,6 @@ import (
 
 	"github.com/brianvoe/gofakeit/v7"
 )
-
-var plugImagesURL = map[gql_gen.CategoryType]string{
-	gql_gen.CategoryTypeBackpack: "https://s3.rtkstore.org/plug/backpack.jpg",
-	gql_gen.CategoryTypeBag:      "https://s3.rtkstore.org/plug/bag.jpg",
-	gql_gen.CategoryTypeOther:    "https://s3.rtkstore.org/plug/other.jpg",
-	gql_gen.CategoryTypeSuitcase: "https://s3.rtkstore.org/plug/suitcase.jpg",
-}
-
-var sizeVariations = map[gql_gen.CategoryType][]string{
-	gql_gen.CategoryTypeSuitcase: {"S", "M", "L"},
-	gql_gen.CategoryTypeBackpack: {"S", "M"},
-	gql_gen.CategoryTypeBag:      {"S", "M"},
-	gql_gen.CategoryTypeOther:    {"none"},
-}
 
 func RandomSizeName(category gql_gen.CategoryType) string {
 	sizes := sizeVariations[category]
@@ -44,39 +30,10 @@ func (s *service) Create(ctx context.Context, quantity int) (*entities.CreatedPr
 
 	s.log.Infof("try to create products, quantity=%d", quantity)
 
-	// INFO: gql client generator doesn't support nasted graphql.Upload
-	// issue: https://github.com/Yamashou/gqlgenc/issues/292
-
-	// previewUpload, err := downloadAsUpload(plugImagesURL[newProduct.Category], rand.Text()+".jpg")
-	// if err != nil {
-	// 	return nil, err
-	// }
-
-	// fmt.Printf("Upload готов: filename=%s, size=%d, contentType=%s\n",
-	// 	previewUpload.Filename, previewUpload.Size, previewUpload.ContentType)
-
-	// imagesCount := 2
-
-	// otherImages := make([]*gql_gen.ProductImageInput, 0, imagesCount)
-
-	// for i := range imagesCount {
-	// 	// fmt.Println(previewUpload)
-
-	// 	img, err := downloadAsUpload(plugImagesURL[newProduct.Category], rand.Text()+".jpg")
-	// 	if err != nil {
-	// 		return nil, err
-	// 	}
-
-	// 	otherImages = append(otherImages, &gql_gen.ProductImageInput{
-	// 		Order: i + 1,
-	// 		Image: img,
-	// 	})
-	// }
-
-	// fmt.Println("otherImages", len(otherImages), cap(otherImages))
-	// for _, img := range otherImages {
-	// 	fmt.Printf("order=%d, filename=%s, size=%d\n", img.Order, img.Image.Filename, img.Image.Size)
-	// }
+	if _, err := s.loadFiles(); err != nil {
+		s.log.Errorw("preload plug files", "error", err)
+		return nil, errors.New("failed to preload plug images")
+	}
 
 	var createdIDs []string
 
@@ -131,6 +88,8 @@ func (s *service) Create(ctx context.Context, quantity int) (*entities.CreatedPr
 
 func (s *service) newMockProduct() (entities.NewProduct, error) {
 
+	var maxImages = 2
+
 	var newProduct entities.NewProduct
 
 	err := gofakeit.Struct(&newProduct)
@@ -142,25 +101,21 @@ func (s *service) newMockProduct() (entities.NewProduct, error) {
 
 	// fmt.Printf("%+v\n", newProduct)
 
-	previewFile, err := fetchFile(plugImagesURL[newProduct.Category], rand.Text()+".jpg")
-	if err != nil {
-		return entities.NewProduct{}, err
+	previewFile, ok := s.plugFiles[newProduct.Category]
+	if !ok {
+		s.log.Errorf("plug image for category not found", "category", newProduct.Category)
+		return entities.NewProduct{}, fmt.Errorf("lug image for category %q not found", newProduct.Category)
 	}
 
 	newProduct.Preview = previewFile
 
-	otherImages := make([]*entities.ProductImageInput, 0, 2)
+	otherImages := make([]*entities.ProductImageInput, 0, maxImages)
 
-	for i := range 2 {
-
-		img, err := fetchFile(plugImagesURL[newProduct.Category], rand.Text()+".jpg")
-		if err != nil {
-			return entities.NewProduct{}, err
-		}
+	for i := range maxImages {
 
 		otherImages = append(otherImages, &entities.ProductImageInput{
 			Order: i + 1,
-			Image: img,
+			Image: &previewFile,
 		})
 	}
 
@@ -170,6 +125,9 @@ func (s *service) newMockProduct() (entities.NewProduct, error) {
 	return newProduct, nil
 
 }
+
+// INFO: gql client generator doesn't support nasted graphql.Upload
+// issue: https://github.com/Yamashou/gqlgenc/issues/292
 
 func (s *service) tempMakeCreateProductMutation(ctx context.Context, input entities.NewProduct) (string, error) {
 
@@ -196,7 +154,7 @@ func (s *service) tempMakeCreateProductMutation(ctx context.Context, input entit
 		}
 	}
 
-	files := []*entities.UploadFile{input.Preview} // индекс 0
+	files := []*entities.UploadFile{&input.Preview} // индекс 0
 	mapData := map[string][]string{
 		"0": {"variables.preview"}, // путь к preview
 	}
