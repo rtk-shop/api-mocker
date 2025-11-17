@@ -17,7 +17,7 @@ type CretatedProductsError struct {
 type NewProduct struct {
 	Title       string               `fake:"{productname}"`
 	SKU         string               `fake:"{productupc}"`
-	BasePrice   int                  `fake:"{number:390,8122}"`
+	BasePrice   float64              `fake:"{number:390,8122}"`
 	Amount      int                  `fake:"{number:10,30}"`
 	Gender      gql_gen.Gender       `fake:"{apiGender}"`
 	Category    gql_gen.CategoryType `fake:"{apiProductCategory}"`
