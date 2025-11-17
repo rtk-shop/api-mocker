@@ -1,7 +1,7 @@
 mutation CreateProduct(
   $title: String!
   $sku: String!
-  $basePrice: Float!
+  $basePrice: Price!
   $amount: Int!
   $gender: Gender!
   $category: CategoryType!

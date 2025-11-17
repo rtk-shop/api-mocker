@@ -10,7 +10,7 @@ import (
 )
 
 type GenGraphQLClient interface {
-	CreateProduct(ctx context.Context, title string, sku string, basePrice float64, amount int, gender Gender, category CategoryType, preview graphql.Upload, images []*ProductImageInput, description string, sizeName string, brandName string, interceptors ...clientv2.RequestInterceptor) (*CreateProduct, error)
+	CreateProduct(ctx context.Context, title string, sku string, basePrice string, amount int, gender Gender, category CategoryType, preview graphql.Upload, images []*ProductImageInput, description string, sizeName string, brandName string, interceptors ...clientv2.RequestInterceptor) (*CreateProduct, error)
 	DeleteProduct(ctx context.Context, id string, interceptors ...clientv2.RequestInterceptor) (*DeleteProduct, error)
 	ProductByID(ctx context.Context, id string, interceptors ...clientv2.RequestInterceptor) (*ProductByID, error)
 }
@@ -24,19 +24,19 @@ func NewClient(cli clientv2.HttpClient, baseURL string, options *clientv2.Option
 }
 
 type CreateProduct_CreateProduct struct {
-	BasePrice    float64 "json:\"basePrice\" graphql:\"basePrice\""
-	CurrentPrice float64 "json:\"currentPrice\" graphql:\"currentPrice\""
-	ID           string  "json:\"id\" graphql:\"id\""
-	Title        string  "json:\"title\" graphql:\"title\""
+	BasePrice    string "json:\"basePrice\" graphql:\"basePrice\""
+	CurrentPrice string "json:\"currentPrice\" graphql:\"currentPrice\""
+	ID           string "json:\"id\" graphql:\"id\""
+	Title        string "json:\"title\" graphql:\"title\""
 }
 
-func (t *CreateProduct_CreateProduct) GetBasePrice() float64 {
+func (t *CreateProduct_CreateProduct) GetBasePrice() string {
 	if t == nil {
 		t = &CreateProduct_CreateProduct{}
 	}
 	return t.BasePrice
 }
-func (t *CreateProduct_CreateProduct) GetCurrentPrice() float64 {
+func (t *CreateProduct_CreateProduct) GetCurrentPrice() string {
 	if t == nil {
 		t = &CreateProduct_CreateProduct{}
 	}
@@ -89,8 +89,8 @@ type ProductByID_Product_Product struct {
 	Title          string                                        "json:\"title\" graphql:\"title\""
 	Sku            string                                        "json:\"sku\" graphql:\"sku\""
 	Gender         Gender                                        "json:\"gender\" graphql:\"gender\""
-	CurrentPrice   float64                                       "json:\"currentPrice\" graphql:\"currentPrice\""
-	BasePrice      float64                                       "json:\"basePrice\" graphql:\"basePrice\""
+	CurrentPrice   string                                        "json:\"currentPrice\" graphql:\"currentPrice\""
+	BasePrice      string                                        "json:\"basePrice\" graphql:\"basePrice\""
 	Amount         int                                           "json:\"amount\" graphql:\"amount\""
 	Tag            *ProductTag                                   "json:\"tag,omitempty\" graphql:\"tag\""
 	Preview        string                                        "json:\"preview\" graphql:\"preview\""
@@ -130,13 +130,13 @@ func (t *ProductByID_Product_Product) GetGender() *Gender {
 	}
 	return &t.Gender
 }
-func (t *ProductByID_Product_Product) GetCurrentPrice() float64 {
+func (t *ProductByID_Product_Product) GetCurrentPrice() string {
 	if t == nil {
 		t = &ProductByID_Product_Product{}
 	}
 	return t.CurrentPrice
 }
-func (t *ProductByID_Product_Product) GetBasePrice() float64 {
+func (t *ProductByID_Product_Product) GetBasePrice() string {
 	if t == nil {
 		t = &ProductByID_Product_Product{}
 	}
@@ -290,7 +290,7 @@ func (t *ProductByID) GetProduct() *ProductByID_Product {
 	return &t.Product
 }
 
-const CreateProductDocument = `mutation CreateProduct ($title: String!, $sku: String!, $basePrice: Float!, $amount: Int!, $gender: Gender!, $category: CategoryType!, $preview: Upload!, $images: [ProductImageInput!]!, $description: HTML!, $sizeName: String!, $brandName: String!) {
+const CreateProductDocument = `mutation CreateProduct ($title: String!, $sku: String!, $basePrice: Price!, $amount: Int!, $gender: Gender!, $category: CategoryType!, $preview: Upload!, $images: [ProductImageInput!]!, $description: HTML!, $sizeName: String!, $brandName: String!) {
 	createProduct(input: {title:$title,sku:$sku,basePrice:$basePrice,amount:$amount,gender:$gender,category:$category,preview:$preview,images:$images,description:$description,sizeName:$sizeName,brandName:$brandName}) {
 		id
 		title
@@ -300,7 +300,7 @@ const CreateProductDocument = `mutation CreateProduct ($title: String!, $sku: St
 }
 `
 
-func (c *Client) CreateProduct(ctx context.Context, title string, sku string, basePrice float64, amount int, gender Gender, category CategoryType, preview graphql.Upload, images []*ProductImageInput, description string, sizeName string, brandName string, interceptors ...clientv2.RequestInterceptor) (*CreateProduct, error) {
+func (c *Client) CreateProduct(ctx context.Context, title string, sku string, basePrice string, amount int, gender Gender, category CategoryType, preview graphql.Upload, images []*ProductImageInput, description string, sizeName string, brandName string, interceptors ...clientv2.RequestInterceptor) (*CreateProduct, error) {
 	vars := map[string]any{
 		"title":       title,
 		"sku":         sku,
