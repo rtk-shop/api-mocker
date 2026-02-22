@@ -6,3 +6,7 @@ oapi:
 	@go tool oapi-codegen -config oapi-codegen.yaml api.yaml
 schema:
 	@get-graphql-schema http://localhost:8080/graphql > schema.graphql
+lint-oapi:
+	vacuum dashboard ./api.yaml
+lint-oapi-raw:
+	vacuum lint -d ./api.yaml

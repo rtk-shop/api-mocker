@@ -21,7 +21,7 @@ paths:
             schema:
               $ref: "#/components/schemas/CreateProductsRequest"
       responses:
-        200:
+        "200":
           description: N-products or some part of them have been successfully created
           content:
             application/json:
@@ -42,13 +42,13 @@ paths:
                     errors:
                       - message: "error details"
                       - message: "error details"
-        400:
+        "400":
           description: Request failed completely or partially
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/CreateProductsResponseError"
-        422:
+        "422":
           description: Bad Request - Invalid input
           content:
             application/json:
@@ -66,19 +66,19 @@ paths:
             schema:
               $ref: "#/components/schemas/DeleteProductsRequest"
       responses:
-        200:
+        "200":
           description: Successfully deleted N-products
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/DeleteProductsResponse"
-        400:
+        "400":
           description: Request failed completely or partially
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/DeleteProductsResponseError"
-        422:
+        "422":
           description: Bad Request - Invalid input
           content:
             application/json:
