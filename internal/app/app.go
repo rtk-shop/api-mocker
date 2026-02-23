@@ -11,6 +11,7 @@ import (
 	"rtk/api-mocker/internal/config"
 	"rtk/api-mocker/internal/server"
 	"rtk/api-mocker/internal/server/gen/openapi"
+	"rtk/api-mocker/internal/services/order"
 	"rtk/api-mocker/internal/services/product"
 	"rtk/api-mocker/pkg/logger"
 	"syscall"
@@ -44,8 +45,15 @@ func New(config *config.Config, logger logger.Logger) App {
 		GqlClient: gqlClient,
 	})
 
+	orderService := order.New(order.ServiceOptions{
+		Config:    config,
+		Logger:    logger,
+		GqlClient: gqlClient,
+	})
+
 	httpServer := server.New(config, logger, server.Services{
 		Products: productService,
+		Orders:   orderService,
 	})
 
 	strictHandler := openapi.NewStrictHandler(httpServer, nil)

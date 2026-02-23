@@ -11,6 +11,16 @@ import (
 	"github.com/99designs/gqlgen/graphql"
 )
 
+type NewOrderInput struct {
+	Name           string             `json:"name"`
+	Surname        string             `json:"surname"`
+	Phone          string             `json:"phone"`
+	CityName       string             `json:"cityName"`
+	PostOfficeName string             `json:"postOfficeName"`
+	Supplier       SupplierService    `json:"supplier"`
+	PaymentMethod  OrderPaymentMethod `json:"paymentMethod"`
+}
+
 type ProductImageInput struct {
 	// order - starts from 1 not from zero-index
 	Order int            `json:"order"`
@@ -20,22 +30,24 @@ type ProductImageInput struct {
 type CategoryType string
 
 const (
-	CategoryTypeBag      CategoryType = "BAG"
-	CategoryTypeOther    CategoryType = "OTHER"
-	CategoryTypeBackpack CategoryType = "BACKPACK"
-	CategoryTypeSuitcase CategoryType = "SUITCASE"
+	CategoryTypeBag                 CategoryType = "BAG"
+	CategoryTypeBackpack            CategoryType = "BACKPACK"
+	CategoryTypeSuitcase            CategoryType = "SUITCASE"
+	CategoryTypeSuitcaseAccessories CategoryType = "SUITCASE_ACCESSORIES"
+	CategoryTypeOther               CategoryType = "OTHER"
 )
 
 var AllCategoryType = []CategoryType{
 	CategoryTypeBag,
-	CategoryTypeOther,
 	CategoryTypeBackpack,
 	CategoryTypeSuitcase,
+	CategoryTypeSuitcaseAccessories,
+	CategoryTypeOther,
 }
 
 func (e CategoryType) IsValid() bool {
 	switch e {
-	case CategoryTypeBag, CategoryTypeOther, CategoryTypeBackpack, CategoryTypeSuitcase:
+	case CategoryTypeBag, CategoryTypeBackpack, CategoryTypeSuitcase, CategoryTypeSuitcaseAccessories, CategoryTypeOther:
 		return true
 	}
 	return false

@@ -31,10 +31,11 @@ type ServiceOptions struct {
 }
 
 var plugImagesURL = map[gql_gen.CategoryType]string{
-	gql_gen.CategoryTypeBackpack: "https://s3.rtkstore.org/plug/backpack.jpg",
-	gql_gen.CategoryTypeBag:      "https://s3.rtkstore.org/plug/bag.jpg",
-	gql_gen.CategoryTypeOther:    "https://s3.rtkstore.org/plug/other.jpg",
-	gql_gen.CategoryTypeSuitcase: "https://s3.rtkstore.org/plug/suitcase.jpg",
+	gql_gen.CategoryTypeBackpack:            "https://s3.rtkstore.org/plug/backpack.jpg",
+	gql_gen.CategoryTypeBag:                 "https://s3.rtkstore.org/plug/bag.jpg",
+	gql_gen.CategoryTypeOther:               "https://s3.rtkstore.org/plug/other.jpg",
+	gql_gen.CategoryTypeSuitcase:            "https://s3.rtkstore.org/plug/suitcase.jpg",
+	gql_gen.CategoryTypeSuitcaseAccessories: "https://s3.rtkstore.org/plug/suitcase.jpg",
 }
 
 var sizeVariations = map[gql_gen.CategoryType][]string{
@@ -85,7 +86,7 @@ func New(options ServiceOptions) Service {
 		Generate: func(f *gofakeit.Faker, m *gofakeit.MapParams, info *gofakeit.Info) (any, error) {
 
 			for {
-				name := gofakeit.ProductName()
+				name := f.ProductName()
 				if len(name) >= 10 {
 					return name, nil
 				}
