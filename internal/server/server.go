@@ -4,6 +4,7 @@ import (
 	"context"
 	"rtk/api-mocker/internal/config"
 	"rtk/api-mocker/internal/server/gen/openapi"
+	"rtk/api-mocker/internal/services/order"
 	"rtk/api-mocker/internal/services/product"
 	"rtk/api-mocker/pkg/logger"
 	"time"
@@ -15,8 +16,11 @@ type Server struct {
 	services Services
 }
 
+var _ openapi.StrictServerInterface = (*Server)(nil)
+
 type Services struct {
 	Products product.Service
+	Orders   order.Service
 }
 
 func New(config *config.Config, logger logger.Logger, services Services) *Server {

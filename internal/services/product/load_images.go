@@ -30,19 +30,15 @@ func (s *service) loadFiles() (map[gql_gen.CategoryType]entities.UploadFile, err
 		var wg sync.WaitGroup
 
 		for key, url := range plugImagesURL {
-			wg.Add(1)
 
-			// no params, cause go 1.24+
-			go func() {
-				defer wg.Done()
-
+			wg.Go(func() {
 				file, err := s.fetchFile(url)
 				if err != nil {
 					results <- fileResult{key: key, err: fmt.Errorf("failed to fetch %s: %w", url, err)}
 				}
 
 				results <- fileResult{key: key, file: file}
-			}()
+			})
 		}
 
 		go func() {

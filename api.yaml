@@ -2,12 +2,59 @@ openapi: 3.0.0
 info:
   title: Mock API server
   version: 1.0.0
+  description: Helper tool for generate app entities
 servers:
   - url: http://localhost:8888
 tags:
   - name: product
     description: Everything related to Products
 paths:
+  /orders:
+    post:
+      tags:
+        - order
+      summary: Create N-orders
+      operationId: CreateOrders
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateOrdersRequest"
+      responses:
+        "200":
+          description: N-orders or some part of them have been successfully created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreateOrdersResponse"
+              examples:
+                fullSuccess:
+                  summary: All orders created successfully
+                  value:
+                    quantity: 3
+                    ordersId: ["812", "813", "814"]
+                    errors: []
+                partialSuccess:
+                  summary: Partial success (3 out of 5)
+                  value:
+                    quantity: 3
+                    ordersId: ["812", "813", "814"]
+                    errors:
+                      - message: "error details"
+                      - message: "error details"
+        "400":
+          description: Request failed completely or partially
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreateOrdersResponseError"
+        "422":
+          description: Bad Request - Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RequestValidationError"
   /products:
     post:
       tags:
@@ -89,13 +136,81 @@ components:
   schemas:
     ErrorInputResponse:
       type: object
+      description: Error part that should be present in all errors
       required:
         - message
       properties:
         message:
           type: string
-          example: "Invalid input"
-    # products — create
+          example: something went wrong
+    RequestValidationError:
+      allOf:
+        - $ref: "#/components/schemas/ErrorInputResponse"
+        - type: object
+          properties:
+            reason:
+              type: string
+              example: the body fields are invalid
+          required:
+            - reason
+    CreateOrdersRequest:
+      type: object
+      x-go-type: entities.CreateOrdersRequest
+      x-go-type-import:
+        path: internal/entities
+        name: CreateOrdersRequest
+      x-go-type-name: entities.CreateOrdersRequest
+      required:
+        - quantity
+        - products
+        - productRangeAmount
+      properties:
+        quantity:
+          type: integer
+          format: int
+          example: 3
+          description: number of mock entities
+        products:
+          type: array
+          items:
+            type: string
+          description: products for orders
+          example: ["3", "7", "5"]
+        productRangeAmount:
+          type: object
+          description: "min, max, numeric range, with min >= 1"
+          required:
+            - min
+            - max
+          properties:
+            min:
+              type: integer
+              example: 1
+            max:
+              type: integer
+              example: 7
+    CreateOrdersResponse:
+      type: object
+      required:
+        - quantity
+        - ordersId
+        - errors
+      properties:
+        quantity:
+          type: integer
+          format: int
+          example: 3
+        ordersId:
+          type: array
+          items:
+            type: string
+          example: ["812", "912", "1012"]
+          description: IDs of orders that were successfully created
+        errors:
+          type: array
+          description: Array of errors for failed order creations
+          items:
+            $ref: "#/components/schemas/CreateOrderErrorItem"
     CreateProductsRequest:
       type: object
       required:
@@ -136,7 +251,14 @@ components:
         message:
           type: string
           example: failed to create any products
-
+    CreateOrdersResponseError:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+          example: failed to create any orders
     CreateProductErrorItem:
       type: object
       required:
@@ -146,8 +268,15 @@ components:
           type: string
           description: Error message describing why the product creation failed
           example: "failed to upload image: connection timeout"
-
-    # products — delete
+    CreateOrderErrorItem:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+          description: Error message describing why the order creation failed
+          example: error that occurs
     DeleteProductsRequest:
       type: object
       required:

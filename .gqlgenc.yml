@@ -9,6 +9,8 @@ client:
 models:
   HTML:
     model: github.com/99designs/gqlgen/graphql.String
+  Price:
+    model: github.com/99designs/gqlgen/graphql.Int64
 endpoint:
   url: http://localhost:8080/graphql
 #   headers: # If you need header for getting introspection query, set it

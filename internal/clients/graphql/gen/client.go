@@ -10,7 +10,9 @@ import (
 )
 
 type GenGraphQLClient interface {
-	CreateProduct(ctx context.Context, title string, sku string, basePrice string, amount int, gender Gender, category CategoryType, preview graphql.Upload, images []*ProductImageInput, description string, sizeName string, brandName string, interceptors ...clientv2.RequestInterceptor) (*CreateProduct, error)
+	AddCartItem(ctx context.Context, productID string, quantity int, interceptors ...clientv2.RequestInterceptor) (*AddCartItem, error)
+	CreateOrder(ctx context.Context, input NewOrderInput, interceptors ...clientv2.RequestInterceptor) (*CreateOrder, error)
+	CreateProduct(ctx context.Context, title string, sku string, basePrice int64, amount int, gender Gender, category CategoryType, preview graphql.Upload, images []*ProductImageInput, description string, sizeName string, brandName string, interceptors ...clientv2.RequestInterceptor) (*CreateProduct, error)
 	DeleteProduct(ctx context.Context, id string, interceptors ...clientv2.RequestInterceptor) (*DeleteProduct, error)
 	ProductByID(ctx context.Context, id string, interceptors ...clientv2.RequestInterceptor) (*ProductByID, error)
 }
@@ -23,20 +25,63 @@ func NewClient(cli clientv2.HttpClient, baseURL string, options *clientv2.Option
 	return &Client{Client: clientv2.NewClient(cli, baseURL, options, interceptors...)}
 }
 
+type AddCartItem_AddCartItem struct {
+	ProductID string "json:\"productId\" graphql:\"productId\""
+	Quantity  int    "json:\"quantity\" graphql:\"quantity\""
+}
+
+func (t *AddCartItem_AddCartItem) GetProductID() string {
+	if t == nil {
+		t = &AddCartItem_AddCartItem{}
+	}
+	return t.ProductID
+}
+func (t *AddCartItem_AddCartItem) GetQuantity() int {
+	if t == nil {
+		t = &AddCartItem_AddCartItem{}
+	}
+	return t.Quantity
+}
+
+type CreateOrder_CreateOrder struct {
+	CreatedAt string "json:\"createdAt\" graphql:\"createdAt\""
+	ID        string "json:\"id\" graphql:\"id\""
+	Price     int64  "json:\"price\" graphql:\"price\""
+}
+
+func (t *CreateOrder_CreateOrder) GetCreatedAt() string {
+	if t == nil {
+		t = &CreateOrder_CreateOrder{}
+	}
+	return t.CreatedAt
+}
+func (t *CreateOrder_CreateOrder) GetID() string {
+	if t == nil {
+		t = &CreateOrder_CreateOrder{}
+	}
+	return t.ID
+}
+func (t *CreateOrder_CreateOrder) GetPrice() int64 {
+	if t == nil {
+		t = &CreateOrder_CreateOrder{}
+	}
+	return t.Price
+}
+
 type CreateProduct_CreateProduct struct {
-	BasePrice    string "json:\"basePrice\" graphql:\"basePrice\""
-	CurrentPrice string "json:\"currentPrice\" graphql:\"currentPrice\""
+	BasePrice    int64  "json:\"basePrice\" graphql:\"basePrice\""
+	CurrentPrice int64  "json:\"currentPrice\" graphql:\"currentPrice\""
 	ID           string "json:\"id\" graphql:\"id\""
 	Title        string "json:\"title\" graphql:\"title\""
 }
 
-func (t *CreateProduct_CreateProduct) GetBasePrice() string {
+func (t *CreateProduct_CreateProduct) GetBasePrice() int64 {
 	if t == nil {
 		t = &CreateProduct_CreateProduct{}
 	}
 	return t.BasePrice
 }
-func (t *CreateProduct_CreateProduct) GetCurrentPrice() string {
+func (t *CreateProduct_CreateProduct) GetCurrentPrice() int64 {
 	if t == nil {
 		t = &CreateProduct_CreateProduct{}
 	}
@@ -89,8 +134,8 @@ type ProductByID_Product_Product struct {
 	Title          string                                        "json:\"title\" graphql:\"title\""
 	Sku            string                                        "json:\"sku\" graphql:\"sku\""
 	Gender         Gender                                        "json:\"gender\" graphql:\"gender\""
-	CurrentPrice   string                                        "json:\"currentPrice\" graphql:\"currentPrice\""
-	BasePrice      string                                        "json:\"basePrice\" graphql:\"basePrice\""
+	CurrentPrice   int64                                         "json:\"currentPrice\" graphql:\"currentPrice\""
+	BasePrice      int64                                         "json:\"basePrice\" graphql:\"basePrice\""
 	Amount         int                                           "json:\"amount\" graphql:\"amount\""
 	Tag            *ProductTag                                   "json:\"tag,omitempty\" graphql:\"tag\""
 	Preview        string                                        "json:\"preview\" graphql:\"preview\""
@@ -130,13 +175,13 @@ func (t *ProductByID_Product_Product) GetGender() *Gender {
 	}
 	return &t.Gender
 }
-func (t *ProductByID_Product_Product) GetCurrentPrice() string {
+func (t *ProductByID_Product_Product) GetCurrentPrice() int64 {
 	if t == nil {
 		t = &ProductByID_Product_Product{}
 	}
 	return t.CurrentPrice
 }
-func (t *ProductByID_Product_Product) GetBasePrice() string {
+func (t *ProductByID_Product_Product) GetBasePrice() int64 {
 	if t == nil {
 		t = &ProductByID_Product_Product{}
 	}
@@ -257,6 +302,28 @@ func (t *ProductByID_Product) GetTypename() *string {
 	return t.Typename
 }
 
+type AddCartItem struct {
+	AddCartItem AddCartItem_AddCartItem "json:\"addCartItem\" graphql:\"addCartItem\""
+}
+
+func (t *AddCartItem) GetAddCartItem() *AddCartItem_AddCartItem {
+	if t == nil {
+		t = &AddCartItem{}
+	}
+	return &t.AddCartItem
+}
+
+type CreateOrder struct {
+	CreateOrder CreateOrder_CreateOrder "json:\"createOrder\" graphql:\"createOrder\""
+}
+
+func (t *CreateOrder) GetCreateOrder() *CreateOrder_CreateOrder {
+	if t == nil {
+		t = &CreateOrder{}
+	}
+	return &t.CreateOrder
+}
+
 type CreateProduct struct {
 	CreateProduct CreateProduct_CreateProduct "json:\"createProduct\" graphql:\"createProduct\""
 }
@@ -290,6 +357,58 @@ func (t *ProductByID) GetProduct() *ProductByID_Product {
 	return &t.Product
 }
 
+const AddCartItemDocument = `mutation AddCartItem ($productId: ID!, $quantity: Int!) {
+	addCartItem(input: {productId:$productId,quantity:$quantity}) {
+		productId
+		quantity
+	}
+}
+`
+
+func (c *Client) AddCartItem(ctx context.Context, productID string, quantity int, interceptors ...clientv2.RequestInterceptor) (*AddCartItem, error) {
+	vars := map[string]any{
+		"productId": productID,
+		"quantity":  quantity,
+	}
+
+	var res AddCartItem
+	if err := c.Client.Post(ctx, "AddCartItem", AddCartItemDocument, &res, vars, interceptors...); err != nil {
+		if c.Client.ParseDataWhenErrors {
+			return &res, err
+		}
+
+		return nil, err
+	}
+
+	return &res, nil
+}
+
+const CreateOrderDocument = `mutation CreateOrder ($input: NewOrderInput!) {
+	createOrder(input: $input) {
+		id
+		price
+		createdAt
+	}
+}
+`
+
+func (c *Client) CreateOrder(ctx context.Context, input NewOrderInput, interceptors ...clientv2.RequestInterceptor) (*CreateOrder, error) {
+	vars := map[string]any{
+		"input": input,
+	}
+
+	var res CreateOrder
+	if err := c.Client.Post(ctx, "CreateOrder", CreateOrderDocument, &res, vars, interceptors...); err != nil {
+		if c.Client.ParseDataWhenErrors {
+			return &res, err
+		}
+
+		return nil, err
+	}
+
+	return &res, nil
+}
+
 const CreateProductDocument = `mutation CreateProduct ($title: String!, $sku: String!, $basePrice: Price!, $amount: Int!, $gender: Gender!, $category: CategoryType!, $preview: Upload!, $images: [ProductImageInput!]!, $description: HTML!, $sizeName: String!, $brandName: String!) {
 	createProduct(input: {title:$title,sku:$sku,basePrice:$basePrice,amount:$amount,gender:$gender,category:$category,preview:$preview,images:$images,description:$description,sizeName:$sizeName,brandName:$brandName}) {
 		id
@@ -300,7 +419,7 @@ const CreateProductDocument = `mutation CreateProduct ($title: String!, $sku: St
 }
 `
 
-func (c *Client) CreateProduct(ctx context.Context, title string, sku string, basePrice string, amount int, gender Gender, category CategoryType, preview graphql.Upload, images []*ProductImageInput, description string, sizeName string, brandName string, interceptors ...clientv2.RequestInterceptor) (*CreateProduct, error) {
+func (c *Client) CreateProduct(ctx context.Context, title string, sku string, basePrice int64, amount int, gender Gender, category CategoryType, preview graphql.Upload, images []*ProductImageInput, description string, sizeName string, brandName string, interceptors ...clientv2.RequestInterceptor) (*CreateProduct, error) {
 	vars := map[string]any{
 		"title":       title,
 		"sku":         sku,
@@ -403,6 +522,8 @@ func (c *Client) ProductByID(ctx context.Context, id string, interceptors ...cli
 }
 
 var DocumentOperationNames = map[string]string{
+	AddCartItemDocument:   "AddCartItem",
+	CreateOrderDocument:   "CreateOrder",
 	CreateProductDocument: "CreateProduct",
 	DeleteProductDocument: "DeleteProduct",
 	ProductByIDDocument:   "ProductByID",

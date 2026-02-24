@@ -8,10 +8,35 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"rtk/api-mocker/internal/entities"
 
 	"github.com/go-chi/chi/v5"
 	strictnethttp "github.com/oapi-codegen/runtime/strictmiddleware/nethttp"
 )
+
+// CreateOrderErrorItem defines model for CreateOrderErrorItem.
+type CreateOrderErrorItem struct {
+	// Message Error message describing why the order creation failed
+	Message string `json:"message"`
+}
+
+// CreateOrdersRequest defines model for CreateOrdersRequest.
+type CreateOrdersRequest = entities.CreateOrdersRequest
+
+// CreateOrdersResponse defines model for CreateOrdersResponse.
+type CreateOrdersResponse struct {
+	// Errors Array of errors for failed order creations
+	Errors []CreateOrderErrorItem `json:"errors"`
+
+	// OrdersId IDs of orders that were successfully created
+	OrdersId []string `json:"ordersId"`
+	Quantity int      `json:"quantity"`
+}
+
+// CreateOrdersResponseError defines model for CreateOrdersResponseError.
+type CreateOrdersResponseError struct {
+	Message string `json:"message"`
+}
 
 // CreateProductErrorItem defines model for CreateProductErrorItem.
 type CreateProductErrorItem struct {
@@ -58,10 +83,19 @@ type DeleteProductsResponseError struct {
 	Message string `json:"message"`
 }
 
-// ErrorInputResponse defines model for ErrorInputResponse.
+// ErrorInputResponse Error part that should be present in all errors
 type ErrorInputResponse struct {
 	Message string `json:"message"`
 }
+
+// RequestValidationError defines model for RequestValidationError.
+type RequestValidationError struct {
+	Message string `json:"message"`
+	Reason  string `json:"reason"`
+}
+
+// CreateOrdersJSONRequestBody defines body for CreateOrders for application/json ContentType.
+type CreateOrdersJSONRequestBody = CreateOrdersRequest
 
 // DeleteProductsJSONRequestBody defines body for DeleteProducts for application/json ContentType.
 type DeleteProductsJSONRequestBody = DeleteProductsRequest
@@ -71,6 +105,9 @@ type CreateProductsJSONRequestBody = CreateProductsRequest
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// Create N-orders
+	// (POST /orders)
+	CreateOrders(w http.ResponseWriter, r *http.Request)
 	// Delete N-products
 	// (DELETE /products)
 	DeleteProducts(w http.ResponseWriter, r *http.Request)
@@ -82,6 +119,12 @@ type ServerInterface interface {
 // Unimplemented server implementation that returns http.StatusNotImplemented for each endpoint.
 
 type Unimplemented struct{}
+
+// Create N-orders
+// (POST /orders)
+func (_ Unimplemented) CreateOrders(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
 
 // Delete N-products
 // (DELETE /products)
@@ -103,6 +146,20 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(http.Handler) http.Handler
+
+// CreateOrders operation middleware
+func (siw *ServerInterfaceWrapper) CreateOrders(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateOrders(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
 
 // DeleteProducts operation middleware
 func (siw *ServerInterfaceWrapper) DeleteProducts(w http.ResponseWriter, r *http.Request) {
@@ -246,6 +303,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	}
 
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/orders", wrapper.CreateOrders)
+	})
+	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/products", wrapper.DeleteProducts)
 	})
 	r.Group(func(r chi.Router) {
@@ -253,6 +313,41 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 
 	return r
+}
+
+type CreateOrdersRequestObject struct {
+	Body *CreateOrdersJSONRequestBody
+}
+
+type CreateOrdersResponseObject interface {
+	VisitCreateOrdersResponse(w http.ResponseWriter) error
+}
+
+type CreateOrders200JSONResponse CreateOrdersResponse
+
+func (response CreateOrders200JSONResponse) VisitCreateOrdersResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateOrders400JSONResponse CreateOrdersResponseError
+
+func (response CreateOrders400JSONResponse) VisitCreateOrdersResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateOrders422JSONResponse RequestValidationError
+
+func (response CreateOrders422JSONResponse) VisitCreateOrdersResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+
+	return json.NewEncoder(w).Encode(response)
 }
 
 type DeleteProductsRequestObject struct {
@@ -327,6 +422,9 @@ func (response CreateProducts422JSONResponse) VisitCreateProductsResponse(w http
 
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
+	// Create N-orders
+	// (POST /orders)
+	CreateOrders(ctx context.Context, request CreateOrdersRequestObject) (CreateOrdersResponseObject, error)
 	// Delete N-products
 	// (DELETE /products)
 	DeleteProducts(ctx context.Context, request DeleteProductsRequestObject) (DeleteProductsResponseObject, error)
@@ -362,6 +460,37 @@ type strictHandler struct {
 	ssi         StrictServerInterface
 	middlewares []StrictMiddlewareFunc
 	options     StrictHTTPServerOptions
+}
+
+// CreateOrders operation middleware
+func (sh *strictHandler) CreateOrders(w http.ResponseWriter, r *http.Request) {
+	var request CreateOrdersRequestObject
+
+	var body CreateOrdersJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateOrders(ctx, request.(CreateOrdersRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateOrders")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateOrdersResponseObject); ok {
+		if err := validResponse.VisitCreateOrdersResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
 }
 
 // DeleteProducts operation middleware
