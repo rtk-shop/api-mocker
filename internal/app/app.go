@@ -13,6 +13,7 @@ import (
 	"rtk/api-mocker/internal/server/gen/openapi"
 	"rtk/api-mocker/internal/services/order"
 	"rtk/api-mocker/internal/services/product"
+	"rtk/api-mocker/pkg/ctxkeys"
 	"rtk/api-mocker/pkg/logger"
 	"syscall"
 	"time"
@@ -32,9 +33,19 @@ func New(config *config.Config, logger logger.Logger) App {
 
 	r := chi.NewRouter()
 
+	r.Use(server.AuthForwardMiddleware)
+
 	gqlClient := gql_gen.NewClient(http.DefaultClient, config.ApiURL, nil,
 		func(ctx context.Context, req *http.Request, gqlInfo *clientv2.GQLRequestInfo, res any, next clientv2.RequestInterceptorFunc) error {
-			req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", config.ApiToken))
+
+			authHeader, ok := ctxkeys.AuthKey(ctx)
+			if !ok || authHeader == "" {
+				logger.Info("use .env.* session")
+				req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", config.ApiToken))
+			} else {
+				logger.Info("use http session")
+				req.Header.Set("Authorization", authHeader)
+			}
 
 			return next(ctx, req, gqlInfo, res)
 		})
@@ -107,24 +118,4 @@ func (a *App) Run() {
 	}
 
 	log.Print("✅ server shutdown gracefully")
-}
-
-// ====================================================================================================
-
-type Server struct{}
-
-func (s *Server) CreateProducts(ctx context.Context, request openapi.CreateProductsRequestObject) (openapi.CreateProductsResponseObject, error) {
-	q := request.Body.Quantity
-
-	if q == 0 {
-		return openapi.CreateProducts400JSONResponse{
-			Message: "invalid quantity",
-		}, nil
-	}
-
-	resp := openapi.CreateProductsResponse{
-		Quantity: q,
-	}
-
-	return openapi.CreateProducts200JSONResponse(resp), nil
 }
