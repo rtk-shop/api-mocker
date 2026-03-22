@@ -61,7 +61,7 @@ func (s *service) Create(ctx context.Context, quantity int) (*entities.CreatedPr
 				// continue work
 			}
 
-			product, err := s.newMockProduct()
+			product, err := s.genMockProduct()
 			if err != nil {
 				s.log.Errorw("get mock product", "error", err)
 				resultsCh <- result{err: err}
@@ -136,7 +136,7 @@ func (s *service) Create(ctx context.Context, quantity int) (*entities.CreatedPr
 	}, nil
 }
 
-func (s *service) newMockProduct() (entities.NewProduct, error) {
+func (s *service) genMockProduct() (entities.NewProduct, error) {
 
 	var maxImages = 2
 

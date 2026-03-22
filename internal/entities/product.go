@@ -18,7 +18,7 @@ type NewProduct struct {
 	Title       string               `fake:"{productname}"`
 	SKU         string               `fake:"{productupc}"`
 	BasePrice   float64              `fake:"{number:390,8122}"`
-	Amount      int                  `fake:"{number:10,30}"`
+	Amount      int                  `fake:"{number:100,300}"`
 	Gender      gql_gen.Gender       `fake:"{apiGender}"`
 	Category    gql_gen.CategoryType `fake:"{apiProductCategory}"`
 	Preview     UploadFile           `fake:"skip"`

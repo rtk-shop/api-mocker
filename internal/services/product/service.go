@@ -39,10 +39,11 @@ var plugImagesURL = map[gql_gen.CategoryType]string{
 }
 
 var sizeVariations = map[gql_gen.CategoryType][]string{
-	gql_gen.CategoryTypeSuitcase: {"S", "M", "L"},
-	gql_gen.CategoryTypeBackpack: {"S", "M"},
-	gql_gen.CategoryTypeBag:      {"S", "M"},
-	gql_gen.CategoryTypeOther:    {"none"},
+	gql_gen.CategoryTypeSuitcase:            {"S", "M", "L"},
+	gql_gen.CategoryTypeBackpack:            {"S", "M"},
+	gql_gen.CategoryTypeBag:                 {"S", "M"},
+	gql_gen.CategoryTypeOther:               {"none"},
+	gql_gen.CategoryTypeSuitcaseAccessories: {"none"},
 }
 
 func New(options ServiceOptions) Service {

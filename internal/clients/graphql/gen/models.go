@@ -200,6 +200,63 @@ func (e OrderPaymentMethod) MarshalJSON() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+type OrderSortField string
+
+const (
+	// PRICE - by order price
+	OrderSortFieldPrice OrderSortField = "PRICE"
+	// CREATION_DATE - by order creation date
+	OrderSortFieldCreationDate OrderSortField = "CREATION_DATE"
+)
+
+var AllOrderSortField = []OrderSortField{
+	OrderSortFieldPrice,
+	OrderSortFieldCreationDate,
+}
+
+func (e OrderSortField) IsValid() bool {
+	switch e {
+	case OrderSortFieldPrice, OrderSortFieldCreationDate:
+		return true
+	}
+	return false
+}
+
+func (e OrderSortField) String() string {
+	return string(e)
+}
+
+func (e *OrderSortField) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = OrderSortField(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid OrderSortField", str)
+	}
+	return nil
+}
+
+func (e OrderSortField) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *OrderSortField) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e OrderSortField) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
 type OrderStatus string
 
 const (
@@ -548,6 +605,61 @@ func (e Role) MarshalJSON() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+type SortDirection string
+
+const (
+	SortDirectionAsc  SortDirection = "ASC"
+	SortDirectionDesc SortDirection = "DESC"
+)
+
+var AllSortDirection = []SortDirection{
+	SortDirectionAsc,
+	SortDirectionDesc,
+}
+
+func (e SortDirection) IsValid() bool {
+	switch e {
+	case SortDirectionAsc, SortDirectionDesc:
+		return true
+	}
+	return false
+}
+
+func (e SortDirection) String() string {
+	return string(e)
+}
+
+func (e *SortDirection) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = SortDirection(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid SortDirection", str)
+	}
+	return nil
+}
+
+func (e SortDirection) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *SortDirection) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e SortDirection) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
 type SupplierService string
 
 const (
@@ -598,6 +710,114 @@ func (e *SupplierService) UnmarshalJSON(b []byte) error {
 }
 
 func (e SupplierService) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
+type UserOrdersSortField string
+
+const (
+	UserOrdersSortFieldCreationDate UserOrdersSortField = "CREATION_DATE"
+)
+
+var AllUserOrdersSortField = []UserOrdersSortField{
+	UserOrdersSortFieldCreationDate,
+}
+
+func (e UserOrdersSortField) IsValid() bool {
+	switch e {
+	case UserOrdersSortFieldCreationDate:
+		return true
+	}
+	return false
+}
+
+func (e UserOrdersSortField) String() string {
+	return string(e)
+}
+
+func (e *UserOrdersSortField) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = UserOrdersSortField(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid UserOrdersSortField", str)
+	}
+	return nil
+}
+
+func (e UserOrdersSortField) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *UserOrdersSortField) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e UserOrdersSortField) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
+type UserSortField string
+
+const (
+	UserSortFieldCreationDate UserSortField = "CREATION_DATE"
+	UserSortFieldOnlineDate   UserSortField = "ONLINE_DATE"
+)
+
+var AllUserSortField = []UserSortField{
+	UserSortFieldCreationDate,
+	UserSortFieldOnlineDate,
+}
+
+func (e UserSortField) IsValid() bool {
+	switch e {
+	case UserSortFieldCreationDate, UserSortFieldOnlineDate:
+		return true
+	}
+	return false
+}
+
+func (e UserSortField) String() string {
+	return string(e)
+}
+
+func (e *UserSortField) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = UserSortField(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid UserSortField", str)
+	}
+	return nil
+}
+
+func (e UserSortField) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *UserSortField) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e UserSortField) MarshalJSON() ([]byte, error) {
 	var buf bytes.Buffer
 	e.MarshalGQL(&buf)
 	return buf.Bytes(), nil
